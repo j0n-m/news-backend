@@ -1,0 +1,28 @@
+{
+  "name": "news-backend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "app.ts",
+  "type": "module",
+  "scripts": {
+    "build": "rimraf ./dist && npx tsc",
+    "dev": "concurrently \"npx tsc -w\" \"nodemon ./dist/app.js\""
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "@tsconfig/node-lts": "^22.0.0",
+    "@types/express": "^5.0.0",
+    "concurrently": "^9.1.0",
+    "nodemon": "^3.1.7",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.6.3"
+  },
+  "dependencies": {
+    "@types/node": "^22.9.0",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.1",
+    "rimraf": "^6.0.1"
+  }
+}
