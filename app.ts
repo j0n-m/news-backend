@@ -3,9 +3,13 @@ import { ErrorRequestHandler } from "express";
 import dotenv from "dotenv";
 import apiRoutes from "./src/routes/api.js";
 import authRoutes from "./src/routes/auth.js";
+import morgan from "morgan";
+import cookieParser from "cookie-parser";
 
 dotenv.config();
 const app = express();
+app.use(morgan("tiny"));
+app.use(cookieParser());
 app.use(express.json());
 
 app.use("/api", apiRoutes);
