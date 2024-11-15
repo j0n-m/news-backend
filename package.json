@@ -12,8 +12,8 @@
   "author": "",
   "license": "ISC",
   "devDependencies": {
-    "@tsconfig/node-lts": "^22.0.0",
     "@types/cookie-parser": "^1.4.7",
+    "@types/cors": "^2.8.17",
     "@types/express": "^5.0.0",
     "@types/morgan": "^1.9.9",
     "concurrently": "^9.1.0",
@@ -24,10 +24,13 @@
   "dependencies": {
     "@types/node": "^22.9.0",
     "cookie-parser": "^1.4.7",
+    "cors": "^2.8.5",
     "dotenv": "^16.4.5",
     "express": "^4.21.1",
     "mongoose": "^8.8.1",
     "morgan": "^1.10.0",
-    "rimraf": "^6.0.1"
+    "rimraf": "^6.0.1",
+    "rss-parser": "^3.13.0",
+    "zod": "^3.23.8"
   }
 }
