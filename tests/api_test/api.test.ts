@@ -12,8 +12,13 @@ describe("Ping test route endpoint", () => {
     request.get("/api/test/idk").expect(404);
   });
 });
-describe("Api end points", () => {
+describe("Api home end point", () => {
   it("should return home data for authed users", () => {
     request.get("/api/home").expect(200).expect("Content-Type", /json/i);
   });
 });
+
+//describe("Api feed categories end point", () => {});
+//describe("Api global feeds end point", () => {});
+//describe("Api users end point", () => {});
+//describe("Api user\'s feeds end point", () => {});

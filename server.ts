@@ -9,6 +9,7 @@ import cors from "cors";
 import app from "./app.js";
 
 dotenv.config();
+//connect to db
 
 const corsOptions: cors.CorsOptions = {
   // origin: "http://localhost:5173",
