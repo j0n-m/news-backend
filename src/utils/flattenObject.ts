@@ -1,4 +1,9 @@
-function flattenObject(obj: { [index: string]: any }) {
+import isObject from "./isObject.js";
+
+function flattenObject(obj: { [key: string]: any }) {
+  if (!isObject(obj)) {
+    throw new Error(`value is not an object to be flattened.`);
+  }
   return Object.keys(obj).reduce((acc, k) => {
     if (
       typeof obj[k] === "object" &&

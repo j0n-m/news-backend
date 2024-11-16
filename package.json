@@ -6,7 +6,8 @@
   "type": "module",
   "scripts": {
     "build": "rimraf ./dist && npx tsc",
-    "dev": "concurrently \"npx tsc -w\" \"nodemon ./dist/app.js\""
+    "dev": "concurrently \"npx tsc -w\" \"nodemon ./dist/app.js\"",
+    "test": "npx vitest"
   },
   "keywords": [],
   "author": "",
@@ -19,7 +20,8 @@
     "concurrently": "^9.1.0",
     "nodemon": "^3.1.7",
     "ts-node": "^10.9.2",
-    "typescript": "^5.6.3"
+    "typescript": "^5.6.3",
+    "vitest": "^2.1.5"
   },
   "dependencies": {
     "@types/node": "^22.9.0",
