@@ -1,7 +1,9 @@
-type SearchParams = {
+type SearchQuery = {
   limit?: string;
   skip?: string;
   startIndex?: string;
+  sort?: string;
+  project?: string;
 };
 
-export { SearchParams };
+export { SearchQuery };

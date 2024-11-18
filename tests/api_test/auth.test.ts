@@ -1,8 +1,12 @@
 import supertest from "supertest";
-import app from "../../app.js";
+import appExpress from "../../app.js";
 import { describe, it } from "vitest";
+import ApiController from "../../src/controllers/apiController.js";
+import ApiDataLayer from "../../src/db/services/apiDataLayer.js";
 
-const request = supertest(app);
+const apiDAL = new ApiDataLayer();
+const apiController = new ApiController(apiDAL);
+const request = supertest(appExpress(apiController));
 
 describe("Auth apis", () => {
   it("should successfully signout", () => {

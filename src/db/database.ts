@@ -1,7 +1,14 @@
+import mongoose from "mongoose";
+import dotenv from "dotenv";
+import Category from "../models/Category.js";
+dotenv.config();
 //controller
 async function connect() {
-  await connectToDb();
+  try {
+    await mongoose.connect(process.env.DB_CONNECTION || "");
+  } catch (error) {
+    console.log(error);
+  }
 }
 
-//connect to db logic
-async function connectToDb() {}
+export default connect;
