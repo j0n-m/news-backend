@@ -9,7 +9,6 @@ class AggregateApi {
     this.query = query;
   }
   sort() {
-    // "test,-test"
     if (this.query.sort) {
       const sortFields = this.query.sort.split(",");
 
@@ -23,8 +22,9 @@ class AggregateApi {
         });
       });
 
-      return this.aggregation;
+      return this;
     }
+    return this;
   }
   project() {
     if (this.query.project) {
@@ -38,12 +38,14 @@ class AggregateApi {
           },
         });
       });
+      return this;
     } else {
       this.aggregation.append({
         $project: {
           __v: 0,
         },
       });
+      return this;
     }
   }
 }

@@ -8,6 +8,7 @@ async function rssParser(
   { skip = 0, limit = 5 }: { skip?: number; limit?: number } = {}
 ) {
   const parser = new Parser({
+    timeout: 3000,
     customFields: {
       feed: ["icon", "image"],
       item: [
@@ -36,7 +37,6 @@ async function rssParser(
           data.enclosure ||
           getImgFromText(data?.content || "") ||
           getImgFromText(data?.description || "") ||
-          feed.icon ||
           feed.image ||
           "";
 
@@ -97,7 +97,7 @@ async function rssParser(
       items: formatted_feed,
     };
   } catch (error) {
-    throw new Error("Error parsing feed url");
+    throw new Error("Error: Cannot parse this feed url");
   }
 }
 

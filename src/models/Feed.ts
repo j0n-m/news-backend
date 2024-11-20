@@ -6,9 +6,9 @@ export interface IFeed {
   url: string;
   title: string;
   category: Array<Types.ObjectId>;
-  is_global: boolean;
 }
 
+//USED FOR GLOBAL LIST MANAGED BY ADMINS
 const feedSchema = new Schema<IFeed>({
   url: {
     type: String,
@@ -16,8 +16,8 @@ const feedSchema = new Schema<IFeed>({
       validator: (url: string) => {
         return /https:\/\//i.test(url);
       },
-      message: (v) =>
-        `error: ${v} is not a valid feed url. Must contain 'https://'`,
+      message: () =>
+        `error: url is not a valid feed url. Must contain 'https://'`,
     },
     required: true,
   },
@@ -30,11 +30,6 @@ const feedSchema = new Schema<IFeed>({
     type: [Schema.Types.ObjectId],
     ref: "Category",
     required: true,
-  },
-  is_global: {
-    type: Boolean,
-    required: true,
-    default: false,
   },
 });
 

@@ -42,6 +42,7 @@ const appExpress = (apiController: ApiController) => {
   });
 
   app.use(function (err: unknown, req, res, next) {
+    console.log(err);
     res.status(500).json({
       code: 500,
       message: "An unexpected server error occured.",
