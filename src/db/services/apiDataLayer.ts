@@ -26,8 +26,7 @@ export default class ApiDataLayer {
       ]),
       query
     );
-    categoriesAggregate.sort();
-    categoriesAggregate.project();
+    categoriesAggregate.sort().project();
     const categories = await categoriesAggregate.aggregation;
     return categories;
   }

@@ -6,8 +6,13 @@ import cors from "cors";
 import ApiDataLayer from "./src/db/services/apiDataLayer.js";
 import ApiController from "./src/controllers/apiController.js";
 import apiRouter from "./src/routes/api.js";
+import AuthController from "./src/controllers/authController.js";
+import authRouter from "./src/routes/auth.js";
 
-const appExpress = (apiController: ApiController) => {
+const appExpress = (
+  apiController: ApiController,
+  authController: AuthController
+) => {
   const app = express();
 
   const corsOptions: cors.CorsOptions = {
@@ -32,6 +37,7 @@ const appExpress = (apiController: ApiController) => {
   app.use(express.json());
 
   app.use("/api", apiRouter(apiController));
+  app.use("/auth", authRouter(authController));
   // app.use("/auth", authRoutes);
 
   app.use((req, res, next) => {

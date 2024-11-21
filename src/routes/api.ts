@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction, Router } from "express";
+import { Router } from "express";
 import ApiController from "../controllers/apiController.js";
 
 const apiRouter = (apiController: ApiController) => {
@@ -7,9 +7,7 @@ const apiRouter = (apiController: ApiController) => {
   router.get("/test", (req, res, next) => {
     res.json({ test: "ok" });
   });
-  // router.get("/home", (req: Request, res: Response, next: NextFunction): any => {
-  //   return res.sendStatus(200);
-  // });
+
   router.get("/home", apiController.home);
 
   //get list of feed categories
@@ -39,14 +37,14 @@ const apiRouter = (apiController: ApiController) => {
   ////////
 
   //get user's feeds
-  router.get("/user/:userId/feeds", apiController.user_feeds_get); //admin or self user  (save raw data of feed here)
+  router.get("/user/:userId/feeds", apiController.user_feeds_get); //admin or self user
   router.get(
     "/user/:userId/saved-feed-items",
     apiController.user_feed_items_get
-  ); //admin or self user (save raw data of feed here)
+  ); //admin or self user
 
   //post to user's feed
-  router.post("/user/:userId/feeds", apiController.user_feeds_post); //admin or self user (uuid?)
+  router.post("/user/:userId/feeds", apiController.user_feeds_post); //admin or self user
   router.post(
     "/user/:userId/saved-feed-items",
     apiController.user_feed_items_post
@@ -67,6 +65,7 @@ const apiRouter = (apiController: ApiController) => {
   ); //admin or self user
 
   // router.get("/fox", apiController.example_fox);
+
   return router;
 };
 

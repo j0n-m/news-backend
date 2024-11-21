@@ -5,11 +5,15 @@ import { MongoMemoryServer } from "mongodb-memory-server";
 import mongoose from "mongoose";
 import ApiController from "../../src/controllers/apiController.js";
 import ApiDataLayer from "../../src/db/services/apiDataLayer.js";
+import AuthDataLayer from "../../src/db/services/authDataLayer.js";
+import AuthController from "../../src/controllers/authController.js";
 
 const apiDAL = new ApiDataLayer();
+const authDAL = new AuthDataLayer();
 const apiController = new ApiController(apiDAL);
+const authController = new AuthController(authDAL, apiDAL);
 
-const request = supertest(appExpress(apiController));
+const request = supertest(appExpress(apiController, authController));
 
 let dbServer: MongoMemoryServer;
 

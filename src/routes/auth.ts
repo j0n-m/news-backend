@@ -1,12 +1,14 @@
-import { Router } from "express";
+import { IRouterMatcher, Router } from "express";
+import AuthController from "../controllers/authController.js";
+import { verifyAuth } from "../middleware/verifyAuth.js";
 
-const router = Router();
+const authRouter = (authController: AuthController) => {
+  const router = Router();
+  router.get("/test", authController.test);
+  router.get("/test-auth", verifyAuth, authController.test);
+  router.post("/login", authController.login);
+  router.post("/logout", authController.logout);
 
-router.post("/signin", (req, res, next) => {
-  res.sendStatus(200);
-});
-router.post("/signout", (req, res, next) => {
-  res.sendStatus(200);
-});
-
-export default router;
+  return router;
+};
+export default authRouter;

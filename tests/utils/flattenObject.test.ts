@@ -39,4 +39,48 @@ describe("Determine if objects are correctly flattened", () => {
   it("should return error is passed in an array", () => {
     expect(() => flattenObject([])).toThrowError();
   });
+  it("should throw error for non-object inputs", () => {
+    expect(() => flattenObject(null as any)).toThrow(
+      "value is not an object to be flattened."
+    );
+    expect(() => flattenObject(undefined as any)).toThrow(
+      "value is not an object to be flattened."
+    );
+    expect(() => flattenObject(42 as any)).toThrow(
+      "value is not an object to be flattened."
+    );
+    expect(() => flattenObject("string" as any)).toThrow(
+      "value is not an object to be flattened."
+    );
+  });
+  it("should keep arrays inside objects as is", () => {
+    const input = {
+      a: {
+        b: [1, 2, 3],
+        c: 4,
+      },
+    };
+
+    const expected = {
+      b: [1, 2, 3],
+      c: 4,
+    };
+
+    expect(flattenObject(input)).toEqual(expected);
+  });
+  it("should handle null values", () => {
+    const input = {
+      a: {
+        b: null,
+        c: 1,
+      },
+    };
+
+    const expected = {
+      b: null,
+      c: 1,
+    };
+
+    expect(flattenObject(input)).toEqual(expected);
+  });
 });
