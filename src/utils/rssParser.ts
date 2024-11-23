@@ -2,6 +2,7 @@ import Parser from "rss-parser";
 import isObject from "./isObject.js";
 import flattenObject from "./flattenObject.js";
 import getImgFromText from "./getImgFromText.js";
+import { randomUUID } from "crypto";
 
 async function rssParser(
   feedURL: string,
@@ -73,6 +74,7 @@ async function rssParser(
           content_snippet: data.contentSnippet || "",
           pubDate: data.pubDate,
           id: i,
+          url_id: randomUUID(),
           author: data.creator || data.author,
           source_link: data.link,
         };

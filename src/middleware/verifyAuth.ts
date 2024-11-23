@@ -34,7 +34,11 @@ const verifyAuth = (req: Request, res: Response, next: NextFunction): any => {
   }
 };
 
-const adminOnlyVerify = (req: Request, res: Response, next: NextFunction) => {
+const adminOnlyVerify = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+): any => {
   if (req.user && req.user.isAdmin) {
     next();
   } else {
@@ -48,7 +52,7 @@ const adminAndUserOnlyVerify = (
   req: Request<{ userId: string }, {}, { userId: string }>,
   res: Response,
   next: NextFunction
-) => {
+): any => {
   const userId = req.body.userId || req.params.userId;
   if (req.user && (req.user.isAdmin || req.user.id === userId)) {
     next();

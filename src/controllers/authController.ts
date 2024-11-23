@@ -15,6 +15,9 @@ export default class AuthController {
     this.authDal = authDal;
     this.apiDal = apiDal;
   }
+  public index = asyncTryHandler(async (req, res, next) => {
+    return res.json({ isAuth: true, userId: req.user?.id });
+  });
   public test = asyncTryHandler(async (req, res, next) => {
     return res.json({ passedAuthTest: true });
   });
@@ -64,18 +67,18 @@ export default class AuthController {
       );
 
       const ENVIRONMENT = process.env?.NODE_ENV;
-      if (ENVIRONMENT === "development") {
+      if (ENVIRONMENT === "production") {
         res.cookie("token", token, {
           httpOnly: true,
+          secure: true,
+          sameSite: "none",
+          path: "/",
           // maxAge = how long the cookie is valid for in milliseconds
           maxAge: 3600000 * 4, // 4hrs,
         });
       } else {
         res.cookie("token", token, {
           httpOnly: true,
-          secure: true,
-          sameSite: "none",
-          path: "/",
           // maxAge = how long the cookie is valid for in milliseconds
           maxAge: 3600000 * 4, // 4hrs,
         });

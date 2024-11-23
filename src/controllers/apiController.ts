@@ -50,13 +50,13 @@ export default class ApiController {
 
       //query users feed urls
       const feedURLs = [
-        "https://moxie.foxnews.com/google-publisher/politics.xml",
+        // "https://moxie.foxnews.com/google-publisher/politics.xml",
         "https://www.theverge.com/rss/index.xml",
         "https://api.axios.com/feed/",
-        // "https://9to5mac.com/feed",
-        // "https://www.cbsnews.com/latest/rss/main",
+        "https://9to5mac.com/feed",
+        "https://www.cbsnews.com/latest/rss/main",
         // "https://www.investing.com/rss/news.rss",
-        // "https://fortune.com/feed",
+        "https://fortune.com/feed",
         "https://www.reddit.com/.rss",
       ];
 
