@@ -204,10 +204,6 @@ export default class ApiController {
   );
 
   public feeds_post = [
-    body("title", "Title must be at least 3 characters long")
-      .trim()
-      .bail()
-      .isLength({ min: 3 }),
     body("category", "Categories is in an invalid format.")
       .isArray({ min: 1 })
       .bail()
@@ -235,13 +231,14 @@ export default class ApiController {
           throw new Error("URL must be in the HTTPS url protocol format.");
         }
 
-        const parsedURL = await rssParser(val, { limit: 1, skip: 0 });
-        if (!parsedURL) {
-          throw new Error("Feed url is not compatabile, try another url.");
-        }
         return true;
       })
       .bail(),
+    body("title", "Title must be at least 3 characters long")
+      .optional()
+      .trim()
+      .bail()
+      .isLength({ min: 3 }),
 
     asyncTryHandler(async (req: Request<{}, {}, IFeed>, res, next) => {
       const errors = validationResult(req);
@@ -255,6 +252,18 @@ export default class ApiController {
             })),
         });
       }
+      //check if url is compatabile
+      const parsedURL = await rssParser(req.body?.url, { limit: 1, skip: 0 });
+      if (!parsedURL) {
+        return res.status(400).json({
+          errors: [{ message: "Feed url is not compatabile, try another url" }],
+        });
+      }
+      //if title is not provided, use the url as the title
+      if (!req.body?.title || req.body?.title?.length < 3) {
+        req.body.title = parsedURL?.feed_title || "myCustomFeed";
+      }
+
       const feed = await this.dal.createFeed(req.body);
       if (!feed) {
         return res
@@ -656,6 +665,8 @@ export default class ApiController {
     ) => {
       const userId = req.params.userId;
       const feedId = req.params.feedId;
+      let rssData;
+
       if (
         !mongoose.isValidObjectId(userId) ||
         !mongoose.isValidObjectId(feedId)
@@ -670,8 +681,19 @@ export default class ApiController {
       if (!userFeed.length) {
         return next();
       }
+      if (req.query.show === "true") {
+        try {
+          const rss = await rssParser(userFeed[0].url, { limit: 20, skip: 0 });
+          rssData = rss;
+        } catch (error) {
+          return res.status(500).json({
+            errors: [{ message: "Error parsing feed data from user's feed" }],
+          });
+        }
+      }
       return res.json({
         user_feed: userFeed,
+        rss_data: rssData ? rssData : [],
       });
     }
   );
@@ -697,6 +719,7 @@ export default class ApiController {
       if (!userFeedItem.length) {
         return next();
       }
+
       return res.json({
         user_feed_item: userFeedItem,
       });

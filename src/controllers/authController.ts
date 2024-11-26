@@ -16,7 +16,14 @@ export default class AuthController {
     this.apiDal = apiDal;
   }
   public index = asyncTryHandler(async (req, res, next) => {
-    return res.json({ isAuth: true, userId: req.user?.id });
+    const userInfo = {
+      id: req.user.id,
+      email: req.user.email,
+      isAdmin: req.user.isAdmin,
+      first_name: req.user.first_name,
+      last_name: req.user.last_name,
+    };
+    return res.json({ isAuth: true, user: userInfo });
   });
   public test = asyncTryHandler(async (req, res, next) => {
     return res.json({ passedAuthTest: true });
@@ -59,7 +66,13 @@ export default class AuthController {
         });
       }
       const token = jwt.sign(
-        { id: user._id, email: user.email, isAdmin: user.isAdmin },
+        {
+          id: user._id,
+          email: user.email,
+          isAdmin: user.isAdmin,
+          first_name: user.first_name,
+          last_name: user.last_name,
+        },
         jwtSecret,
         {
           expiresIn: "4h",

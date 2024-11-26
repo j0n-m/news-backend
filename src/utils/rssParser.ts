@@ -93,6 +93,7 @@ async function rssParser(
       });
 
     return {
+      total_items: formatted_feed?.length ?? 0,
       feed_title: feed.title,
       feed_link: feed.link,
       feed_description: feed.description,

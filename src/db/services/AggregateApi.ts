@@ -8,7 +8,7 @@ class AggregateApi {
     this.aggregation = aggregation;
     this.query = query;
   }
-  sort() {
+  sort(sortName?: string) {
     if (this.query.sort) {
       const sortFields = this.query.sort.split(",");
 
@@ -22,6 +22,18 @@ class AggregateApi {
         });
       });
 
+      return this;
+    } else if (sortName) {
+      const sortFields = sortName.split(",");
+      sortFields.forEach((fields: string) => {
+        const hasMinusSymbol = /-/.test(fields);
+        let field = hasMinusSymbol ? fields.slice(1) : fields;
+        this.aggregation.append({
+          $sort: {
+            [field]: hasMinusSymbol ? -1 : 1,
+          },
+        });
+      });
       return this;
     }
     return this;

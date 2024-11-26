@@ -4,6 +4,7 @@ type SearchQuery = {
   startIndex?: string;
   sort?: string;
   project?: string;
+  show?: string;
 };
 
 export { SearchQuery };

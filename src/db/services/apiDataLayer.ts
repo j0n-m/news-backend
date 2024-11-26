@@ -8,6 +8,7 @@ import CommunityFeed, { ICommunityFeed } from "../../models/CommunityFeed.js";
 import CommunityFeedItem, {
   ICommunityFeedItem,
 } from "../../models/CommunityFeedItem.js";
+import rssParser from "../../utils/rssParser.js";
 
 export default class ApiDataLayer {
   public async createCategory({ name }: { name: string }) {
@@ -87,7 +88,7 @@ export default class ApiDataLayer {
       query
     );
 
-    feedsAggregate.sort();
+    feedsAggregate.sort("title");
     feedsAggregate.project();
 
     const feeds = await feedsAggregate.aggregation;
@@ -322,6 +323,7 @@ export default class ApiDataLayer {
       ]),
       query
     );
+
     userFeedItemAggregate.sort().project();
     const userFeedItem = await userFeedItemAggregate.aggregation;
     return userFeedItem;
