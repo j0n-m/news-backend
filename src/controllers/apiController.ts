@@ -42,26 +42,27 @@ export default class ApiController {
   }
   public home = asyncTryHandler(
     async (req: Request<{}, {}, {}, SearchQuery>, res, next) => {
+      if (!req.user?.id) {
+        return res.sendStatus(401);
+      }
       const homeLimitSchema = z.enum(["1", "5", "7"]).catch("5");
       const schemaRes = homeLimitSchema.parse(req.query.limit);
 
       const limit = Number(schemaRes);
       const CONTENT_LIMIT = 15;
 
+      interface ICF extends ICommunityFeed {
+        _id: string;
+      }
       //query users feed urls
-      const feedURLs = [
-        // "https://moxie.foxnews.com/google-publisher/politics.xml",
-        "https://www.theverge.com/rss/index.xml",
-        "https://api.axios.com/feed/",
-        "https://9to5mac.com/feed",
-        "https://www.cbsnews.com/latest/rss/main",
-        // "https://www.investing.com/rss/news.rss",
-        "https://fortune.com/feed",
-        "https://www.reddit.com/.rss",
-      ];
+      const userFeeds: ICF[] = await this.dal.getUserFeeds({
+        userId: req.user.id,
+        query: { ...req.query },
+      });
 
       let startIndex: number | null = Number(req.query.startIndex) || 0;
-      const endIndex = feedURLs.length - 1;
+      // const endIndex = feedURLs.length - 1;
+      const endIndex = userFeeds.length - 1;
 
       if (isNaN(Number(startIndex)) || startIndex > endIndex) {
         return res.json({
@@ -73,9 +74,14 @@ export default class ApiController {
       //loops through feedURL array
       let totalFeedItems = 0;
       const feeds = [];
-      for (let i = startIndex; i < feedURLs.length; i++) {
+      for (let i = startIndex; i < userFeeds.length; i++) {
         if (totalFeedItems + limit > CONTENT_LIMIT) break;
-        const feed = await rssParser(feedURLs[i], { limit });
+        const feed = await rssParser(userFeeds[i].url, {
+          limit,
+          feedId: userFeeds[i]._id.toString(),
+          title: userFeeds[i].title,
+        });
+        if (!feed) continue;
         totalFeedItems += feed.items.length;
         feeds.push(feed);
         startIndex = i + 1 > endIndex ? null : i + 1;
@@ -225,15 +231,17 @@ export default class ApiController {
       .isString()
       .isURL()
       .bail()
-      .custom(async (val: string) => {
+      .custom((val: string) => {
         const isValidURL = /https/i.test(val);
         if (!isValidURL) {
           throw new Error("URL must be in the HTTPS url protocol format.");
         }
-
         return true;
       })
-      .bail(),
+      .bail()
+      .customSanitizer((url: string) => {
+        return url.replace(/\/$/, "");
+      }),
     body("title", "Title must be at least 3 characters long")
       .optional()
       .trim()
@@ -252,8 +260,19 @@ export default class ApiController {
             })),
         });
       }
+
+      const isDupeGlobalFeedURL = await this.dal.isGlobalDupeFeedURL(
+        req.body.url
+      );
+      if (isDupeGlobalFeedURL) {
+        return res.status(400).json({
+          errors: [{ message: "A feed already exists with this url" }],
+        });
+      }
       //check if url is compatabile
+
       const parsedURL = await rssParser(req.body?.url, { limit: 1, skip: 0 });
+
       if (!parsedURL) {
         return res.status(400).json({
           errors: [{ message: "Feed url is not compatabile, try another url" }],
@@ -338,13 +357,12 @@ export default class ApiController {
           throw new Error("URL must be in the HTTPS url protocol format.");
         }
 
-        const parsedURL = await rssParser(val, { limit: 1, skip: 0 });
-        if (!parsedURL) {
-          throw new Error("Feed url is not compatabile, try another url.");
-        }
         return true;
       })
-      .bail(),
+      .bail()
+      .customSanitizer((url: string) => {
+        return url.replace(/\/$/, "");
+      }),
 
     asyncTryHandler(
       async (req: Request<{ feedId: string }, {}, IFeed>, res, next) => {
@@ -363,6 +381,19 @@ export default class ApiController {
                 message: e.msg,
               })),
           });
+        }
+        if (req.body?.url) {
+          const parsedURL = await rssParser(req.body?.url, {
+            limit: 1,
+            skip: 0,
+          });
+          if (!parsedURL) {
+            return res.status(400).json({
+              errors: [
+                { message: "Feed url is not compatabile, try another url" },
+              ],
+            });
+          }
         }
 
         const response = await this.dal.editFeed({ feedId, feed: req.body });
@@ -514,11 +545,10 @@ export default class ApiController {
           throw new Error("URL must be in the HTTPS url protocol format.");
         }
 
-        const parsedURL = await rssParser(val, { limit: 1, skip: 0 });
-        if (!parsedURL) {
-          throw new Error("Feed url is not compatabile, try another url.");
-        }
         return true;
+      })
+      .customSanitizer((url: string) => {
+        return url.replace(/\/$/, "");
       }),
     body("title", "Title must be at least 3 characters long")
       .trim()
@@ -580,6 +610,14 @@ export default class ApiController {
         if (isDupeFeedURL) {
           return res.status(400).json({
             errors: [{ message: "You already have a feed with this url" }],
+          });
+        }
+        const parsedURL = await rssParser(req.body.url, { limit: 1, skip: 0 });
+        if (!parsedURL) {
+          return res.status(400).json({
+            errors: [
+              { message: "Feed url is not compatabile, try another url." },
+            ],
           });
         }
 
@@ -683,7 +721,7 @@ export default class ApiController {
       }
       if (req.query.show === "true") {
         try {
-          const rss = await rssParser(userFeed[0].url, { limit: 20, skip: 0 });
+          const rss = await rssParser(userFeed[0].url, { limit: 25, skip: 0 });
           rssData = rss;
         } catch (error) {
           return res.status(500).json({

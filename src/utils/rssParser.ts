@@ -6,7 +6,12 @@ import { randomUUID } from "crypto";
 
 async function rssParser(
   feedURL: string,
-  { skip = 0, limit = 5 }: { skip?: number; limit?: number } = {}
+  {
+    skip = 0,
+    limit = 5,
+    feedId,
+    title,
+  }: { skip?: number; limit?: number; feedId?: string; title?: string } = {}
 ) {
   const parser = new Parser({
     timeout: 3000,
@@ -91,16 +96,25 @@ async function rssParser(
         }
         return false;
       });
+    // .sort((obj1, obj2) => {
+    //   const today = new Date();
+    //   const obj1Date = new Date(obj1.pubDate || today);
+    //   const obj2Date = new Date(obj2.pubDate || today);
+    //   return obj1Date > obj2Date ? -1 : obj1Date < obj2Date ? 1 : 0;
+    // });
 
     return {
       total_items: formatted_feed?.length ?? 0,
-      feed_title: feed.title,
+      feed_title: title || feed.title,
       feed_link: feed.link,
+      id: feedId || feed.link,
       feed_description: feed.description,
       items: formatted_feed,
     };
   } catch (error) {
-    throw new Error("Error: Cannot parse this feed url");
+    // throw new Error("Error: Cannot parse this feed url");
+    console.log("rssParser error", error);
+    return false;
   }
 }
 

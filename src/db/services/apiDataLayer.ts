@@ -221,7 +221,7 @@ export default class ApiDataLayer {
       ]),
       query
     );
-    userFeedsAggregate.sort().project();
+    userFeedsAggregate.sort("title").project();
     const userFeeds = await userFeedsAggregate.aggregation;
     return userFeeds;
   }
@@ -328,11 +328,24 @@ export default class ApiDataLayer {
     const userFeedItem = await userFeedItemAggregate.aggregation;
     return userFeedItem;
   }
+  public async isGlobalDupeFeedURL(url: string) {
+    const parsedURL = url.replace(/\/$/, "");
+
+    const isDupe = await Feed.findOne({ url: parsedURL });
+    if (!isDupe) {
+      return false;
+    }
+    return true;
+  }
   public async isDupeFeedURL(userId: string, url: string) {
+    const parsedURL = url.replace(/\/$/, "");
+
+    // const dupeRegex = new RegExp(`^${url}$`, "i");
     const isDupe = await CommunityFeed.findOne({
       owner: new mongoose.Types.ObjectId(userId),
-      url,
+      url: parsedURL,
     });
+
     if (!isDupe) {
       return false;
     }
