@@ -202,9 +202,17 @@ export default class ApiController {
   );
   public feeds_get = asyncTryHandler(
     async (req: Request<{}, {}, {}, SearchQuery>, res, next) => {
-      const feeds = await this.dal.getFeeds({ query: req.query });
+      // const feeds = await this.dal.getFeeds({ query: req.query });
+      // return res.json({
+      //   feeds,
+      // });
+
+      const { feeds, documentInfo } = await this.dal.getFeeds({
+        query: req.query,
+      });
       return res.json({
-        feeds,
+        feeds_info: documentInfo,
+        feeds: feeds,
       });
     }
   );
@@ -526,11 +534,17 @@ export default class ApiController {
     if (!mongoose.isValidObjectId(userId)) {
       return next();
     }
-    const userFeedItems = await this.dal.getUserFeedItems({
+    if (!req.query?.sort) {
+      req.query.sort = "-date_added";
+    }
+    const { userFeedItems, documentInfo } = await this.dal.getUserFeedItems({
       userId,
       query: req.query,
     });
-    return res.json({ saved_feed_items: userFeedItems });
+    return res.json({
+      saved_items_info: documentInfo,
+      saved_feed_items: userFeedItems,
+    });
   });
 
   public user_feeds_post = [
@@ -631,10 +645,8 @@ export default class ApiController {
   ];
 
   public user_feed_items_post = [
-    body("feed_title", "feed title must be at least 3 characters long")
-      .trim()
-      .isLength({ min: 3 }),
-    body("data_added", "date added must be in a ISO8601 date format")
+    body("feed", "feed id is required").trim().isMongoId(),
+    body("date_added", "date added must be in a ISO8601 date format")
       .default(new Date())
       .bail()
       .isISO8601(),
@@ -682,6 +694,15 @@ export default class ApiController {
                 value: e?.value,
                 message: e.msg,
               })),
+          });
+        }
+        const isDupeFeedItem = await this.dal.isDupeFeedItem({
+          userId: req.user!.id,
+          source_link: req.body.data.source_link,
+        });
+        if (isDupeFeedItem) {
+          return res.status(400).json({
+            errors: [{ message: "You already have this feed item saved." }],
           });
         }
 

@@ -9,17 +9,20 @@ describe("Test if correctly parses rss feed url", () => {
     expect(val).toBeDefined();
     expect(val).toHaveProperty("feed_title");
   });
-  it("should return error for non feed urls", async () => {
+  it("should return false for non feed urls", async () => {
     const feedURL = "youtube.com";
+    const res = await rssParser(feedURL);
 
-    await expect(() => rssParser(feedURL)).rejects.toThrowError();
+    expect(res).toBe(false);
   });
-  it("should return error for invalid urls", async () => {
+  it("should return false for invalid urls", async () => {
     const feedURL = "idk";
-    await expect(() => rssParser(feedURL)).rejects.toThrowError();
+    const res = await rssParser(feedURL);
+    expect(res).toBe(false);
   });
-  it("should return error for empty urls", async () => {
+  it("should return false for empty urls", async () => {
     const feedURL = "";
-    await expect(() => rssParser(feedURL)).rejects.toThrowError();
+    const res = await rssParser(feedURL);
+    expect(res).toBe(false);
   });
 });

@@ -4,7 +4,7 @@ import { z } from "zod";
 const Schema = mongoose.Schema;
 export interface ICommunityFeedItem {
   data: FeedItem;
-  feed_title: string;
+  feed: mongoose.Types.ObjectId;
   date_added: Date;
   owner: mongoose.Types.ObjectId;
 }
@@ -12,6 +12,7 @@ export interface ICommunityFeedItem {
 export const FeedItemSchema = z.object({
   content: z.string().optional(),
   image_url: z.string().optional(),
+  url_id: z.string().uuid(),
   title: z
     .string({ message: "title must be at least 3 characters long" })
     .min(3),
@@ -24,10 +25,10 @@ export const FeedItemSchema = z.object({
 export type FeedItem = z.infer<typeof FeedItemSchema>;
 
 const communityFeedItemSchema = new Schema<ICommunityFeedItem>({
-  feed_title: {
-    type: "String",
+  feed: {
+    type: mongoose.Schema.ObjectId,
+    ref: "CommunityFeed",
     required: true,
-    minlength: 3,
   },
   owner: {
     type: mongoose.Schema.ObjectId,
@@ -45,6 +46,10 @@ const communityFeedItemSchema = new Schema<ICommunityFeedItem>({
     },
     id: {
       type: "Number",
+      required: true,
+    },
+    url_id: {
+      type: "String",
       required: true,
     },
     pubDate: {

@@ -34,7 +34,7 @@ const appExpress = (
   app.use(cors(corsOptions));
   app.use(morgan("tiny"));
   app.use(cookieParser());
-  app.use(express.json());
+  app.use(express.json({ limit: "5mb" }));
 
   app.use("/api", apiRouter(apiController));
   app.use("/auth", authRouter(authController));

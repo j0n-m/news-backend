@@ -88,11 +88,25 @@ export default class ApiDataLayer {
       query
     );
 
+    const clonedPipeline = Feed.aggregate(
+      feedsAggregate.aggregation.pipeline()
+    );
+    const clonedAggregation = new AggregateApi(clonedPipeline, query);
+
     feedsAggregate.sort("title");
     feedsAggregate.project();
 
+    //limits the return data size
+    feedsAggregate.setSkip();
+    feedsAggregate.setLimit();
+
     const feeds = await feedsAggregate.aggregation;
-    return feeds;
+
+    //infinite pagination
+    clonedAggregation.getInfinitePagination(feeds);
+
+    const documentInfo = await clonedAggregation.aggregation;
+    return { feeds, documentInfo };
   }
   public async createFeed(feedData: IFeed) {
     const feed = new Feed({
@@ -242,10 +256,37 @@ export default class ApiDataLayer {
       ]),
       query
     );
-    userFeedItemsAggregate.sort().project();
+    if (query?.url_id) {
+      userFeedItemsAggregate.aggregation.append({
+        $match: {
+          "data.url_id": query.url_id,
+        },
+      });
+    }
+    if (query?.src_link) {
+      userFeedItemsAggregate.aggregation.append({
+        $match: {
+          "data.source_link": query.src_link,
+        },
+      });
+    }
+    const clonedPipeline = Object.create(userFeedItemsAggregate.aggregation);
+    const clonedAggregation = new AggregateApi(clonedPipeline, {});
+
+    userFeedItemsAggregate.sort();
+    userFeedItemsAggregate.project();
+
+    userFeedItemsAggregate.setSkip();
+    userFeedItemsAggregate.setLimit();
+
     const userFeedItems = await userFeedItemsAggregate.aggregation;
 
-    return userFeedItems;
+    //infinite pagination
+    clonedAggregation.getInfinitePagination(userFeedItems);
+
+    const documentInfo = await clonedAggregation.aggregation;
+
+    return { userFeedItems, documentInfo };
   }
   public async createUserFeed({
     userId,
@@ -267,7 +308,7 @@ export default class ApiDataLayer {
   public async createUserFeedItem({ data }: { data: ICommunityFeedItem }) {
     const userFeedItem = new CommunityFeedItem({
       owner: data.owner,
-      feed_title: data.feed_title,
+      feed: data.feed,
       date_added: data.date_added,
       data: data.data,
     });
@@ -336,6 +377,22 @@ export default class ApiDataLayer {
       return false;
     }
     return true;
+  }
+  public async isDupeFeedItem({
+    userId,
+    source_link,
+  }: {
+    userId: string;
+    source_link: string;
+  }) {
+    const isDupe = await CommunityFeedItem.findOne({
+      owner: new mongoose.Types.ObjectId(userId),
+      "data.source_link": source_link,
+    });
+    if (isDupe) {
+      return true;
+    }
+    return false;
   }
   public async isDupeFeedURL(userId: string, url: string) {
     const parsedURL = url.replace(/\/$/, "");
