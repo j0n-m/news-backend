@@ -7,6 +7,7 @@ type SearchQuery = {
   show?: string;
   url_id?: string;
   src_link?: string;
+  sortBy?: string;
 };
 
 export { SearchQuery };

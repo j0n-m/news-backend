@@ -5,6 +5,7 @@ const Schema = mongoose.Schema;
 export interface ICommunityFeedItem {
   data: FeedItem;
   feed: mongoose.Types.ObjectId;
+  fallback_feed_title: string;
   date_added: Date;
   owner: mongoose.Types.ObjectId;
 }
@@ -28,6 +29,9 @@ const communityFeedItemSchema = new Schema<ICommunityFeedItem>({
   feed: {
     type: mongoose.Schema.ObjectId,
     ref: "CommunityFeed",
+  },
+  fallback_feed_title: {
+    type: String,
     required: true,
   },
   owner: {

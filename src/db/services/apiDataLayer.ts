@@ -78,6 +78,93 @@ export default class ApiDataLayer {
     const response = await Category.findByIdAndDelete(categoryId);
     return response;
   }
+  public async getFeedsByCategory({ query }: { query: SearchQuery }) {
+    const feedsAggregate = new AggregateApi(
+      Feed.aggregate([
+        {
+          $facet: {
+            feed_info: [
+              {
+                $group: {
+                  _id: null,
+                  total_records: {
+                    $count: {},
+                  },
+                },
+              },
+              {
+                $project: {
+                  _id: 0,
+                },
+              },
+            ],
+            feed_data: [
+              {
+                $group: {
+                  _id: "$category",
+                  feed_count: {
+                    $count: {},
+                  },
+                  feeds: {
+                    $push: "$_id",
+                  },
+                },
+              },
+              {
+                $lookup: {
+                  from: "categories",
+                  localField: "_id",
+                  foreignField: "_id",
+                  as: "category_info",
+                },
+              },
+              {
+                $lookup: {
+                  from: "feeds",
+                  localField: "feeds",
+                  foreignField: "_id",
+                  as: "feeds",
+                },
+              },
+              {
+                $unwind: {
+                  path: "$_id",
+                },
+              },
+              {
+                $unwind: {
+                  path: "$category_info",
+                },
+              },
+              {
+                $sort: {
+                  "category_info.name": 1,
+                },
+              },
+              {
+                $addFields: {
+                  feeds: {
+                    $sortArray: { input: "$feeds", sortBy: { title: 1 } },
+                  },
+                },
+              },
+            ],
+          },
+        },
+      ]),
+      query
+    );
+    feedsAggregate.aggregation.append({
+      $limit: 5,
+    });
+
+    feedsAggregate.aggregation.append({
+      $unwind: "$feed_info",
+    });
+
+    const feeds = await feedsAggregate.aggregation;
+    return feeds;
+  }
   public async getFeeds({ query }: { query: SearchQuery }) {
     const feedsAggregate = new AggregateApi(
       Feed.aggregate([
@@ -270,12 +357,26 @@ export default class ApiDataLayer {
         },
       });
     }
-    const clonedPipeline = Object.create(userFeedItemsAggregate.aggregation);
-    const clonedAggregation = new AggregateApi(clonedPipeline, {});
 
-    userFeedItemsAggregate.sort();
+    const clonedPipeline = CommunityFeedItem.aggregate(
+      userFeedItemsAggregate.aggregation.pipeline()
+    );
+    const clonedAggregation = new AggregateApi(clonedPipeline, query);
+
+    userFeedItemsAggregate.sort("-date_added");
+
+    userFeedItemsAggregate.aggregation.append({
+      $lookup: {
+        from: "communityfeeds",
+        localField: "feed",
+        foreignField: "_id",
+        as: "feed",
+      },
+    });
+    userFeedItemsAggregate.aggregation.append({
+      $unwind: { path: "$feed", preserveNullAndEmptyArrays: true },
+    });
     userFeedItemsAggregate.project();
-
     userFeedItemsAggregate.setSkip();
     userFeedItemsAggregate.setLimit();
 
@@ -284,7 +385,7 @@ export default class ApiDataLayer {
     //infinite pagination
     clonedAggregation.getInfinitePagination(userFeedItems);
 
-    const documentInfo = await clonedAggregation.aggregation;
+    let documentInfo = await clonedAggregation.aggregation;
 
     return { userFeedItems, documentInfo };
   }
@@ -309,6 +410,7 @@ export default class ApiDataLayer {
     const userFeedItem = new CommunityFeedItem({
       owner: data.owner,
       feed: data.feed,
+      fallback_feed_title: data.fallback_feed_title,
       date_added: data.date_added,
       data: data.data,
     });

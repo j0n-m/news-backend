@@ -202,11 +202,14 @@ export default class ApiController {
   );
   public feeds_get = asyncTryHandler(
     async (req: Request<{}, {}, {}, SearchQuery>, res, next) => {
-      // const feeds = await this.dal.getFeeds({ query: req.query });
-      // return res.json({
-      //   feeds,
-      // });
-
+      if (req.query.sortBy === "category") {
+        const feeds = await this.dal.getFeedsByCategory({
+          query: req.query,
+        });
+        return res.json({
+          feeds,
+        });
+      }
       const { feeds, documentInfo } = await this.dal.getFeeds({
         query: req.query,
       });
@@ -571,7 +574,7 @@ export default class ApiController {
       .default(false)
       .isBoolean(),
     body("category", "Category must be a list of valid category ids")
-      .isArray({ min: 1 })
+      .isArray({ min: 0 })
       .bail()
       .custom(async (arr: string[]) => {
         for (const id of arr) {
@@ -585,6 +588,7 @@ export default class ApiController {
         return arr.map((id: string) => new mongoose.Types.ObjectId(id));
       }),
     body("owner", "Owner must be a valid user id")
+      .optional()
       .trim()
       .isMongoId()
       .bail()
@@ -634,6 +638,9 @@ export default class ApiController {
             ],
           });
         }
+        if (!req.user!.isAdmin) {
+          req.body.owner = new mongoose.Types.ObjectId(req.user!.id);
+        }
 
         const addFeed = await this.dal.createUserFeed({
           userId,
@@ -645,7 +652,8 @@ export default class ApiController {
   ];
 
   public user_feed_items_post = [
-    body("feed", "feed id is required").trim().isMongoId(),
+    body("feed", "feed id is required").optional().trim().isMongoId(),
+    body("fallback_feed_title").trim(),
     body("date_added", "date added must be in a ISO8601 date format")
       .default(new Date())
       .bail()
@@ -705,6 +713,11 @@ export default class ApiController {
             errors: [{ message: "You already have this feed item saved." }],
           });
         }
+        // const feedInfo = await this.dal.getUserFeed({
+        //   userId: req.user!.id,
+        //   feedId: req.body.feed.toString(),
+        //   query: req.query,
+        // });
 
         if (!req?.user?.isAdmin) {
           req.body.date_added = new Date();

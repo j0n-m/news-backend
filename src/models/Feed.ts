@@ -12,13 +12,6 @@ export interface IFeed {
 const feedSchema = new Schema<IFeed>({
   url: {
     type: String,
-    validate: {
-      validator: (url: string) => {
-        return /https:\/\//i.test(url);
-      },
-      message: () =>
-        `error: url is not a valid feed url. Must contain 'https://'`,
-    },
     required: true,
   },
   title: {
