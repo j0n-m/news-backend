@@ -34,17 +34,18 @@ async function rssParser(
 
     const formatted_feed = feed.items
       .map((data, i) => {
-        // console.log(data.description);
+        // console.log("feed item content", data?.["content"]);
         let imageURL =
-          data["media:content"] ||
           data["media:thumbnail"] ||
+          getImgFromText(data?.["content:encoded"] || "") ||
+          getImgFromText(data?.description || "") ||
+          getImgFromText(data?.["content"] || "") ||
+          data["media:content"] ||
           data.image ||
           data.img ||
           data.enclosure ||
-          getImgFromText(data?.content || "") ||
-          getImgFromText(data?.description || "") ||
           feed.image ||
-          "";
+          feed.icon;
 
         imageURL =
           typeof imageURL === "string"
@@ -53,9 +54,15 @@ async function rssParser(
             ? flattenObject(imageURL)
             : "";
 
+        /*
+            &&
+              (/(jpg|jpeg|png|gif|JPG|JPEG|PNG|GIF|webp)$/gi.test(
+                imageURL[key]
+              ) ||
+                /image/i.test(imageURL[key]))
+            */
         if (typeof imageURL !== "string") {
           for (const key in imageURL) {
-            // console.log(imageURL[key]);
             if (
               typeof imageURL[key] === "string" &&
               imageURL[key].includes("http")
@@ -65,9 +72,19 @@ async function rssParser(
               //array?
             } else if (typeof imageURL[key] === "object") {
               //b/c filter returns an array, we only want to return the string in the first index
-              imageURL = imageURL[key].filter((str: any) =>
-                /http/i.test(str)
-              )[0];
+              // imageURL = imageURL[key].filter((str: any) =>
+              //   /http/i.test(str)
+              // )[0];
+              if (Array.isArray(imageURL[key])) {
+                const src = imageURL[key][0];
+                if (typeof src === "string") {
+                  imageURL = src;
+                }
+              } else {
+                imageURL = "";
+              }
+
+              // break;
             }
           }
         }
