@@ -14,7 +14,7 @@ async function rssParser(
   }: { skip?: number; limit?: number; feedId?: string; title?: string } = {}
 ) {
   const parser = new Parser({
-    timeout: 3000,
+    timeout: 5000,
     customFields: {
       feed: ["icon", "image"],
       item: [

@@ -16,7 +16,7 @@ export default function getImgFromText(str: string): undefined | string {
     const imgSrc = strMutate
       .split("src=")[1]
       .split(/[ >]/)[0]
-      .replace(/"|'/g, "");
+      .replace(/"/g, "");
     strMutate = strMutate.replace("src=", "");
     if (/(jpg|gif|png|webp|jpeg)/gi.test(imgSrc) || /image/gi.test(imgSrc)) {
       return imgSrc;

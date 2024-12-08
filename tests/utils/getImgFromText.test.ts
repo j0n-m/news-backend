@@ -40,4 +40,11 @@ describe("Test extracting <img> element's src URL", () => {
       "https://www.nasa.gov/wp-content/uploads/2024/12/1-oakwood.jpg"
     );
   });
+  it("Should return src url with apostrophe embedded", () => {
+    const srcURL = `src=https://assetsio.gnwcdn.com/Assassin's-Creed-Shadows_-Official-World-Premiere-Trailer-2-34-screenshot-(1).png?width=1920&height=1920&fit=bounds&quality=80&format=jpg&auto=webp`;
+    const result = getImgFromText(srcURL);
+    expect(result).toMatch(
+      "https://assetsio.gnwcdn.com/Assassin's-Creed-Shadows_-Official-World-Premiere-Trailer-2-34-screenshot-(1).png?width=1920&height=1920&fit=bounds&quality=80&format=jpg&auto=webp"
+    );
+  });
 });
