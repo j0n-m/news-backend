@@ -3,6 +3,7 @@ import isObject from "./isObject.js";
 import flattenObject from "./flattenObject.js";
 import getImgFromText from "./getImgFromText.js";
 import { randomUUID } from "crypto";
+import { ParsedFeedItems } from "../schemas/Feed.js";
 
 async function rssParser(
   feedURL: string,
@@ -23,6 +24,7 @@ async function rssParser(
         ["media:thumbnail", "media:thumbnail", { keepArray: false }],
         ["author", "author", { keepArray: false }],
         ["image", "image", { keepArray: false }],
+        ["image:url", "image:url", { keepArray: false }],
         ["img", "img", { keepArray: false }],
         ["description", "description", { keepArray: false }],
       ],
@@ -36,13 +38,14 @@ async function rssParser(
       .map((data, i) => {
         // console.log("feed item content", data?.["content"]);
         let imageURL =
-          data["media:thumbnail"] ||
           getImgFromText(data?.["content:encoded"] || "") ||
           getImgFromText(data?.description || "") ||
           getImgFromText(data?.["content"] || "") ||
           data["media:content"] ||
+          data["image:url"] ||
           data.image ||
           data.img ||
+          data["media:thumbnail"] ||
           data.enclosure ||
           feed.image ||
           feed.icon;
@@ -77,11 +80,14 @@ async function rssParser(
               // )[0];
               if (Array.isArray(imageURL[key])) {
                 const src = imageURL[key][0];
-                if (typeof src === "string") {
+                if (
+                  typeof src === "string" &&
+                  src.includes("http") &&
+                  (/(jpg|jpeg|png|gif|JPG|JPEG|PNG|GIF|webp)$/gi.test(src) ||
+                    /image/i.test(src))
+                ) {
                   imageURL = src;
                 }
-              } else {
-                imageURL = "";
               }
 
               // break;
@@ -94,7 +100,7 @@ async function rssParser(
           image_url: imageURL,
           title: data.title,
           content_snippet: data.contentSnippet || "",
-          pubDate: data.pubDate,
+          pubDate: data?.pubDate || data?.isoDate,
           id: i,
           url_id: randomUUID(),
           author: data.creator || data.author,

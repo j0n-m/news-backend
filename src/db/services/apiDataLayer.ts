@@ -4,11 +4,15 @@ import Feed, { IFeed } from "../../models/Feed.js";
 import AggregateApi from "./AggregateApi.js";
 import { SearchQuery } from "../../types/searchParams.js";
 import User, { IUser } from "../../models/User.js";
-import CommunityFeed, { ICommunityFeed } from "../../models/CommunityFeed.js";
+import CommunityFeed, {
+  ICF,
+  ICommunityFeed,
+} from "../../models/CommunityFeed.js";
 import CommunityFeedItem, {
   ICommunityFeedItem,
 } from "../../models/CommunityFeedItem.js";
 import rssParser from "../../utils/rssParser.js";
+import { ParsedFeed, ParsedFeedItems } from "../../schemas/Feed.js";
 
 export default class ApiDataLayer {
   public async createCategory({ name }: { name: string }) {
@@ -224,6 +228,36 @@ export default class ApiDataLayer {
     const feed = await Feed.findByIdAndDelete(feedId);
     return feed;
   }
+  public async editUserSingleFeed({
+    feedId,
+    payload,
+  }: {
+    feedId: string;
+    payload: Pick<ICommunityFeed, "url" | "title" | "is_pinned">;
+  }) {
+    const oldFeed = await CommunityFeed.findById(feedId);
+    if (!oldFeed) {
+      return null;
+    }
+    if (payload.title) {
+      const feedItem = await CommunityFeedItem.find({
+        feed: new mongoose.Types.ObjectId(feedId),
+      });
+      feedItem.forEach((item) => {
+        if (payload.title && item.fallback_feed_title !== payload.title) {
+          item.fallback_feed_title = payload.title;
+          item.save();
+        }
+      });
+    }
+
+    const editFeed = await CommunityFeed.findByIdAndUpdate(feedId, {
+      title: payload.title || oldFeed.title,
+      is_pinned: payload.is_pinned || oldFeed.is_pinned,
+      url: payload.url || oldFeed.url,
+    });
+    return editFeed;
+  }
   public async editFeed({ feedId, feed }: { feedId: string; feed: IFeed }) {
     const oldFeed = await Feed.findById(feedId);
     if (!oldFeed) {
@@ -305,6 +339,75 @@ export default class ApiDataLayer {
     const deletedUser = await User.findByIdAndDelete(userId);
     return deletedUser;
   }
+  public async getUserSavedFeedInfo({
+    userId,
+    query,
+    feeds,
+    feedItems,
+  }: {
+    userId: string;
+    query: SearchQuery;
+    feeds: ParsedFeed[] | null;
+    feedItems?: ParsedFeedItems[];
+  }) {
+    let feedsQuery;
+    if (feeds) {
+      feedsQuery = feeds
+        ?.map((feed) => {
+          return feed.items.map((item) => item.source_link);
+        })
+        .flat()
+        .map((feed) => ({ "data.source_link": feed }));
+    } else {
+      feedsQuery = feedItems
+        ?.map((item) => item.source_link)
+        .flat()
+        .map((feed) => ({ "data.source_link": feed }));
+    }
+
+    const userFeedsAggregate = new AggregateApi(
+      CommunityFeedItem.aggregate([
+        {
+          $match: {
+            owner: new mongoose.Types.ObjectId(userId),
+            $or: feedsQuery,
+          },
+        },
+        {
+          $group: {
+            _id: "$data.source_link",
+            feed_info: {
+              $push: "$$ROOT",
+            },
+          },
+        },
+        {
+          $unwind: {
+            path: "$feed_info",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+        {
+          $lookup: {
+            from: "communityfeeds",
+            localField: "feed_info.feed",
+            foreignField: "_id",
+            as: "feed_info.feed",
+          },
+        },
+        {
+          $unwind: {
+            path: "$feed_info.feed",
+            preserveNullAndEmptyArrays: true,
+          },
+        },
+      ]),
+      query
+    );
+    const savedFeedInfo = await userFeedsAggregate.aggregation;
+    // console.log("feedsquery->", feedsQuery);
+    return savedFeedInfo;
+  }
   public async getUserFeeds({
     userId,
     query,
@@ -326,6 +429,28 @@ export default class ApiDataLayer {
     const userFeeds = await userFeedsAggregate.aggregation;
     return userFeeds;
   }
+  public async updateUserFeedItemsByOldFeed({
+    userId,
+    feed,
+  }: {
+    userId: string;
+    feed: ICommunityFeed & { _id: mongoose.Types.ObjectId };
+  }) {
+    const savedFeedItems = await CommunityFeedItem.find({
+      owner: new mongoose.Types.ObjectId(userId),
+      fallback_feed_url: feed.url,
+    });
+    if (!savedFeedItems.length) {
+      return null;
+    }
+    savedFeedItems.forEach((item) => {
+      if (item.feed._id.toString() !== feed._id.toString()) {
+        item.feed = feed._id;
+        item.fallback_feed_title = feed.title;
+        item.save();
+      }
+    });
+  }
   public async getUserFeedItems({
     userId,
     query,
@@ -343,6 +468,24 @@ export default class ApiDataLayer {
       ]),
       query
     );
+    if (query?.q) {
+      const regexQuery = new RegExp(query.q, "ig");
+      userFeedItemsAggregate.aggregation.append({
+        $match: {
+          $or: [
+            { "data.title": regexQuery },
+            { fallback_feed_title: regexQuery },
+          ],
+        },
+      });
+    }
+    if (query?.old_feed) {
+      userFeedItemsAggregate.aggregation.append({
+        $match: {
+          fallback_feed_url: query.old_feed,
+        },
+      });
+    }
     if (query?.url_id) {
       userFeedItemsAggregate.aggregation.append({
         $match: {
@@ -407,10 +550,17 @@ export default class ApiDataLayer {
     return res;
   }
   public async createUserFeedItem({ data }: { data: ICommunityFeedItem }) {
+    const feed = await this.getUserFeed({
+      userId: data.owner.toString(),
+      feedId: data.feed.toString(),
+      query: {},
+    });
+
     const userFeedItem = new CommunityFeedItem({
       owner: data.owner,
       feed: data.feed,
       fallback_feed_title: data.fallback_feed_title,
+      fallback_feed_url: feed[0]?.url,
       date_added: data.date_added,
       data: data.data,
     });

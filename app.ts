@@ -28,7 +28,7 @@ const appExpress = (
     },
     methods: "GET,HEAD,PUT,PATCH,POST,DELETE",
     preflightContinue: false,
-    allowedHeaders: ["Content-Type"],
+    allowedHeaders: ["Content-Type", "Accept-Encoding"],
     credentials: true,
   };
   app.use(cors(corsOptions));

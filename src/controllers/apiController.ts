@@ -9,11 +9,12 @@ import { IFeed } from "../models/Feed.js";
 import { ICategory } from "../models/Category.js";
 import { IUser } from "../models/User.js";
 import bcrypt from "bcrypt";
-import { ICommunityFeed } from "../models/CommunityFeed.js";
+import { ICF, ICommunityFeed } from "../models/CommunityFeed.js";
 import {
   FeedItemSchema,
   ICommunityFeedItem,
 } from "../models/CommunityFeedItem.js";
+import { FeedSchema, ParsedFeed, ParsedFeedItems } from "../schemas/Feed.js";
 
 export type MiddlewareFunction = (
   req: Request | any,
@@ -51,9 +52,6 @@ export default class ApiController {
       const limit = Number(schemaRes);
       const CONTENT_LIMIT = 15;
 
-      interface ICF extends ICommunityFeed {
-        _id: string;
-      }
       //query users feed urls
       const userFeeds: ICF[] = await this.dal.getUserFeeds({
         userId: req.user.id,
@@ -83,12 +81,21 @@ export default class ApiController {
         });
         if (!feed) continue;
         totalFeedItems += feed.items.length;
-        feeds.push(feed);
+        const res = FeedSchema.parse(feed);
+        feeds.push(res);
         startIndex = i + 1 > endIndex ? null : i + 1;
       }
+      const savedFeedInfo = await this.dal.getUserSavedFeedInfo({
+        userId: req.user!.id,
+        feeds: feeds,
+        query: req.query,
+      });
+      // console.log('savedfeedInfo-home',savedFeedInfo)
+
       return res.json({
         data: feeds,
         nextStart: startIndex,
+        savedFeedInfo,
       });
     }
   );
@@ -529,6 +536,7 @@ export default class ApiController {
         userId,
         query: req.query,
       });
+
       return res.json({ user_feeds: userFeeds });
     }
   );
@@ -646,6 +654,12 @@ export default class ApiController {
           userId,
           data: req.body,
         });
+
+        //re-attach to saved feed items if feed url is same;
+        const savedFeedItem = await this.dal.updateUserFeedItemsByOldFeed({
+          userId: req.user!.id,
+          feed: addFeed,
+        });
         return res.json({ isSuccess: true, id: addFeed.id });
       }
     ),
@@ -738,6 +752,7 @@ export default class ApiController {
       const userId = req.params.userId;
       const feedId = req.params.feedId;
       let rssData;
+      let savedFeedInfo;
 
       if (
         !mongoose.isValidObjectId(userId) ||
@@ -755,8 +770,28 @@ export default class ApiController {
       }
       if (req.query.show === "true") {
         try {
-          const rss = await rssParser(userFeed[0].url, { limit: 25, skip: 0 });
-          rssData = rss;
+          type test = Awaited<ReturnType<typeof rssParser>>;
+          const rss: test = await rssParser(userFeed[0].url, {
+            limit: 30,
+            skip: 0,
+          });
+          const newRSS = FeedSchema.parse(rss);
+          newRSS.id = feedId;
+          const feed = await this.dal.getUserFeed({
+            feedId: feedId,
+            userId: userId,
+            query: {},
+          });
+          newRSS.feed_title = feed[0]?.title || "";
+          if (newRSS) {
+            rssData = newRSS;
+            savedFeedInfo = await this.dal.getUserSavedFeedInfo({
+              userId: req.user!.id,
+              query: req.query,
+              feedItems: rssData.items as any as ParsedFeedItems[],
+              feeds: null,
+            });
+          }
         } catch (error) {
           return res.status(500).json({
             errors: [{ message: "Error parsing feed data from user's feed" }],
@@ -766,9 +801,100 @@ export default class ApiController {
       return res.json({
         user_feed: userFeed,
         rss_data: rssData ? rssData : [],
+        savedFeedInfo,
       });
     }
   );
+  public user_feed_detail_put = [
+    body("url", "URL must be in a HTTPS format")
+      .optional()
+      .trim()
+      .isString()
+      .isURL()
+      .bail()
+      .custom(async (val: string) => {
+        const isValidURL = /https/i.test(val);
+        if (!isValidURL) {
+          throw new Error("URL must be in the HTTPS url protocol format.");
+        }
+
+        return true;
+      })
+      .customSanitizer((url: string) => {
+        return url.replace(/\/$/, "");
+      }),
+    body("title", "Title must be at least 3 characters long")
+      .optional()
+      .trim()
+      .isLength({ min: 3 }),
+    body("is_pinned", "is_pinned must be true or false")
+      .optional()
+      .default(false)
+      .isBoolean(),
+
+    asyncTryHandler(
+      async (
+        req: Request<
+          { userId: string; feedId: string },
+          {},
+          Pick<ICommunityFeed, "url" | "title" | "is_pinned">
+        >,
+        res,
+        next
+      ) => {
+        const userId = req.params.userId;
+        const feedId = req.params.feedId;
+        if (
+          !mongoose.isValidObjectId(userId) ||
+          !mongoose.isValidObjectId(feedId)
+        ) {
+          return next();
+        }
+        const errors = validationResult(req);
+
+        if (!errors.isEmpty()) {
+          return res.status(400).json({
+            errors: errors
+              .array()
+              .map((e: ValidationError & { value?: string }) => ({
+                value: e?.value,
+                message: e.msg,
+              })),
+          });
+        }
+        if (req.body.url) {
+          const isDupeFeedURL = await this.dal.isDupeFeedURL(
+            userId,
+            req.body.url
+          );
+          if (isDupeFeedURL) {
+            return res.status(400).json({
+              errors: [{ message: "You already have a feed with this url" }],
+            });
+          }
+          const parsedURL = await rssParser(req.body.url, {
+            limit: 1,
+            skip: 0,
+          });
+          if (!parsedURL) {
+            return res.status(400).json({
+              errors: [
+                { message: "Feed url is not compatabile, try another url." },
+              ],
+            });
+          }
+        }
+        const editFeed = await this.dal.editUserSingleFeed({
+          feedId,
+          payload: req.body,
+        });
+        if (!editFeed) {
+          return res.status(500);
+        }
+        return res.json({ isSuccess: true, id: feedId });
+      }
+    ),
+  ];
   public user_feed_item_detail_get = asyncTryHandler(
     async (
       req: Request<{ userId: string; feedItemId: string }, {}, {}, SearchQuery>,

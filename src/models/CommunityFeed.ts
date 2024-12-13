@@ -7,6 +7,10 @@ export interface ICommunityFeed {
   is_pinned: boolean;
   owner: mongoose.Types.ObjectId;
 }
+export interface ICF extends ICommunityFeed {
+  _id: string;
+}
+
 const Schema = mongoose.Schema;
 
 const communityFeedSchema = new Schema<ICommunityFeed>({

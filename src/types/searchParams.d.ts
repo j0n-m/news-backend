@@ -8,6 +8,8 @@ type SearchQuery = {
   url_id?: string;
   src_link?: string;
   sortBy?: string;
+  q?: string;
+  old_feed?: string;
 };
 
 export { SearchQuery };

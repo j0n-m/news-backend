@@ -111,6 +111,12 @@ const apiRouter = (apiController: ApiController) => {
     adminAndUserOnlyVerify,
     apiController.user_feed_detail_get
   ); //admin or self user
+  router.put(
+    "/user/:userId/feed/:feedId",
+    verifyAuth,
+    adminAndUserOnlyVerify,
+    apiController.user_feed_detail_put
+  ); //admin or self user
   router.get(
     "/user/:userId/saved-feed-item/:feedItemId",
     verifyAuth,
@@ -131,8 +137,6 @@ const apiRouter = (apiController: ApiController) => {
     adminAndUserOnlyVerify,
     apiController.user_feed_item_delete
   ); //admin or self user
-
-  // router.get("/fox", apiController.example_fox);
 
   return router;
 };
